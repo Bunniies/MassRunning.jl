@@ -1,51 +1,52 @@
-using Revise, MassRunning, ADerrors
+using  MassRunning, ADerrors
 
-HyperParams()
+# HyperParameters definition 
+hp = HyperParams()
+hp.F2               # F2 coefficient 
+hp.F3               # F3 coefficient 
+hp.Lambda           # Lambda from ALPHA (covariance with F3 taken into account)
+hp.match_nf4_to_nf3 # matching between nf4 and nf3 theories 
 
 ##############
-## Mc
+##  Running of Mc
 ################
-# mc at muhad
-mCmuhad = uwreal([1627.0,8.0],"mCmuhad")
+# input: mc at muhad
+mCmuhad = uwreal([1627.0,8.0],"mCmuhad") # = McRGI * RGI_factor
 
-mCRGI = uwreal([1455.0, 20.0], "RGI")
-# matching nf=3 to nf = 4
+# running to 3 GeV
+F4_3gev = msbar_over_MRGI_factor(mu=uwreal([3000.0,0.0],"mu"), nc=3, nf=3, hp=hp)
+mc_3gev_3f = mCmuhad * hp.F2 * hp.F3 * F4_3gev; uwerr(mc_3gev_3f)
+mc_3gev_4f = hp.match_nf4_to_nf3 * mc_3gev_3f; uwerr(mc_3gev_4f)
+# check with linear error propagation
+err_mc_3gev_3f = error_mass_running(mCmuhad, F4=F4_3gev, hp=hp)
 
-match_nf = 1.29011 / 1.29931 # nf4 / nf3
-##################
-## mc at 3GeV nf=3 the matched 
-##################
-# test with full running 
-mc_3gev_3f = match_nf * mbar_running(mCmuhad, mu=uwreal([3000.0,0.0],"mu"), nf=3); uwerr(mc_3gev_3f);# mc_3gev_3f
-# test with error propagation
-err_mc_3gev_3f = match_nf *  error_mass_running(mCmuhad, F4=F4=uwreal([0.6824, 0.0052], "F4")) #; uwerr(test); details(test)
+println("\n######################## ")
+println("Results at 3GeV\n")
+println("mc(3GeV, nf=3) = ", mc_3gev_3f)
+println("err from lin. prop. =", err_mc_3gev_3f)
+println("mc(3GeV, nf=4) = ", mc_3gev_4f)
+println("######################## \n")
 
-println("From full running: ", "m_c(3GeV, N_f=4)= "  , mc_3gev_3f )
-println("From linear prop: "," δm_c(3GeV, N_f=3)= "  , err_mc_3gev_3f )
+# running to mass scale mbar
+F4_mbar = msbar_over_MRGI_factor(mu=uwreal([1299.0,0.0],"mu"), nc=3, nf=3, hp=hp)
+mc_mc_3f = mCmuhad * hp.F2 * hp.F3 * F4_mbar; uwerr(mc_mc_3f)
+mc_mc_4f = hp.match_nf4_to_nf3 * mc_mc_3f; uwerr(mc_mc_4f)
+# check with linear error propagation
+err_mc_mc_3f = error_mass_running(mCmuhad, F4=F4_mbar, hp=hp)
+
+println("\n######################## ")
+println("Results at mc scale\n")
+println("mc(mc, nf=3) = ", mc_mc_3f)
+println("err from lin. prop. =", err_mc_mc_3f)
+println("mc(mc, nf=4) = ", mc_mc_4f)
+println("########################")
+
 ##
-#####################
-## mc at mc nf=3 then matched 
-#####################
-# test with full running 
-mc_mc_3f  =  match_nf *   mbar_running(mCmuhad, mu=uwreal([1299.9,0.0], "mu"), nf=3); uwerr(mc_mc_3f); mc_mc_3f
-# test with error propagation
-err_mc_mc_3f =  match_nf *error_mass_running(mCmuhad, F4=uwreal([0.874, 0.013], "F4")) #; uwerr(test); details(test)
-
-println("From full running: ", "m_c(m_c, N_f=3)= ", mc_mc_3f )
-println("From linear prop: "," δm_c(m_c, N_f=3)= "  ,err_mc_mc_3f )
-
-
-##############
-## Mb
-##############
-mBmuhad = uwreal([6604.0,59.0],"mCmuhad")
-mCRGI = uwreal([1455.0, 20.0], "RGI")
-mb_3gev_3f = match_nf * mbar_running(mBmuhad, mu=uwreal([3000.0,0.0],"mu"), nf=3); uwerr(mb_3gev_3f); mb_3gev_3f
-mb_mb_3f   = match_nf *  mbar_running(mBmuhad, mu=uwreal([4170.4,0.0], "mu"), nf=3); uwerr(mb_mb_3f); mb_mb_3f
-
-details(mb_mb_3f)
-
-sqrt(err(mb_mb_3f)^2 * 0.3515)
-sqrt(err(mb_mb_3f)^2 * 0.6485)
-
-sqrt(err(mb_3gev_3f)^2 - err(mb_3gev_3f)^2 * 0.57) 
+"""
+You can use the details() function to access the error contribution of each quantity.
+Due to a bad behaviour in ADerrors, when introducing covariance between Lambda and F3, the ensemble id is lost in an 
+unpredictable integer chosen by aderrors. To overcome this, I had to call the ensembles correspnding to Lamdbda:"1" and the 
+ensembles corresponding to F3:"2".
+"""
+details(mc_3gev_4f)
+details(mc_mc_4f)

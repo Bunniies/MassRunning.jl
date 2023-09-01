@@ -1,18 +1,26 @@
-@kwdef struct HyperParams()
-    F2::uwreal=uwreal([1.7505,0.0089], "F2")
-    F3::uwreal=uwreal([0.5226, 0.0043], "F3")
-    Lambda_cov::Matrix= [[150.7862014579557, -0.01716315895017156] [ -0.01716315895017156, 0.00001830314004469306]]
+struct HyperParams
+    F2::uwreal
+    F3::uwreal 
+    Lambda::uwreal
+    match_nf4_to_nf3::Float64 
+end
+function HyperParams(; _F2=uwreal([1.7505,0.0089], "F2"), F3_val=0.5226, Lambda_val=341, Lambda_F3_cov= [[150.7862014579557, -0.01716315895017156] [ -0.01716315895017156, 0.00001830314004469306]], nf4_to_nf3=0.9929)
+    vals = cobs([Lambda_val, F3_val], Lambda_F3_cov, [1,2])
+    return HyperParams(_F2, vals[2], vals[1], nf4_to_nf3)
 end
 
-function error_mass_running(obs::uwreal; F4=uwreal([0.6824, 0.0052], "F4"))
+"""
+error_mass_running(obs::uwreal; F4=uwreal([0.6824, 0.0052], "F4"); hp::HyperParams=HyperParams())
 
-    C = [[150.7862014579557, -0.01716315895017156] [ -0.01716315895017156, 0.00001830314004469306]]
-    #Lamb_F3 = cobs([ 341, 0.5226] , C, [10, 11])
-    Lamb = uwreal([341.0,12.0], "CC")
-    F3 = uwreal([0.5226, 0.0043], "AA")
-    
-    F2=uwreal([1.7505,0.0089], "F2")
-    #F3=Lamb_F3[2]
+Given an observable in the SF scheme at scale muhad and the running factor F4, this function performs
+linear error propagation
+"""
+function error_mass_running(obs::uwreal; F4=uwreal([0.6824, 0.0052], "F4"), hp::HyperParams=HyperParams())
+
+    F2 = hp.F2
+    F3 = hp.F3 
+    Lamb = hp.Lambda  
+    Cov_elem_12 =  -0.01716315895017156
     uwerr(obs); uwerr(F2); uwerr(F3); uwerr(F4); uwerr(Lamb)
 
     dF4dLambda = err(F4) / err(Lamb)
@@ -22,28 +30,44 @@ function error_mass_running(obs::uwreal; F4=uwreal([0.6824, 0.0052], "F4"))
                 value(obs)^2 * err(F2)^2 * value(F3)^2 * value(F4)^2 +
                 value(obs)^2 * value(F2)^2 * err(F3)^2 * value(F4)^2 +
                 value(obs)^2 * value(F2)^2 * value(F3)^2 * err(F4)^2 +
-                2 * value(obs)^2 * value(F2)^2 * value(F3) * value(F4) *  C[1,2]  * dF4dLambda
+                2 * value(obs)^2 * value(F2)^2 * value(F3) * value(F4) *  Cov_elem_12  * dF4dLambda
     )    
     return delta_obs2^0.5
 end
 
+"""
+msbar_over_MRGI_factor(; mu=uwreal([3000,0.0],"mu"), nc = 3, nf = 4, hp::HyperParams=HyperParams())
+
+Given a scale mu. Given nc number of color and nf number of flavours for the beta and tau functions. Given Lambda included in hp.
+
+This function returns the F4 coefficient required to perform the RGI running
+"""
+function msbar_over_MRGI_factor(; mu=uwreal([3000,0.0],"mu"), nc = 3, nf = 4, hp::HyperParams=HyperParams())
+
+    bcoefs = beta_function_coeff(nc, nf)
+    tcoefs = tau_function_coef(nc, nf)
+    
+    gbar = g_from_RG_eq(mu, bcoefs, hp=hp)
+    F4 = solve_RG_eq_mass(gbar, bcoefs, tcoefs)
+    # uwerr(gbar); uwerr(F4)
+    # println("g  = ", gbar)
+    # println("F4 = ", F4)
+    return F4
+end
 
 
 function solve_RG_eq(g, bt)
     beta(x,p) = - x^3*p[1] - x^5*p[2] - x^7*p[3] - x^9*p[4] 
     integrand(x,p) =  1 / beta(x,p) + 1 / ( p[1]*x^3) - p[2]/(p[1]^2*x)
-
     N = (bt[1] * g^2)^(bt[2]/(2*bt[1]^2)) * exp(1 / (2*bt[1]*g^2))
-
     int_val = int_error(integrand, 0.0, g, uwreal.(bt) )
-
     return N * exp(int_val)
 end
 
-function g_from_RG_eq(mu, Lambda, bcoef; grange=1.5:0.001:2.5, pl::Bool=true)
+function g_from_RG_eq(mu, bcoef;hp::HyperParams=HyperParams(), grange=1.5:0.001:2.5, pl::Bool=true)
     mu_over_lambda_predict = []
     grange1 =[]
-    mu_over_lambda_true = mu / Lambda ; uwerr(mu_over_lambda_true)
+    mu_over_lambda_true = mu / hp.Lambda ; uwerr(mu_over_lambda_true)
 
     for g in grange
         try
@@ -88,6 +112,10 @@ function solve_RG_eq_mass(g, bt, dt)
 
 end
 
+"""
+beta_function_coeff(nc, nf)
+Coefficient of the beta function at 4 loops with nc colors and nf flavours 
+"""
 function beta_function_coeff(nc, nf)
     zeta3 = 1.20205690315959428539; zeta4 = pi^4/90;  zeta5 = 1.03692775514336992633;
 
@@ -106,6 +134,10 @@ function beta_function_coeff(nc, nf)
     return bcoefs
 end
 
+"""
+tau_function_coeff(nc, nf)
+Coefficient of the tau function at 4 loops with nc colors and nf flavours 
+"""
 function tau_function_coef(nc, nf)
     zeta3 = 1.20205690315959428539; zeta4 = pi^4/90;  zeta5 = 1.03692775514336992633;
 
@@ -123,31 +155,3 @@ function tau_function_coef(nc, nf)
 
     return tcoefs
 end
-
-function mbar_running(mhad::uwreal; mu=uwreal([3000,0.0],"mu"), nc = 3, nf = 4)
-
-    bcoefs = beta_function_coeff(nc, nf)
-    tcoefs = tau_function_coef(nc, nf)
-
-
-    covar = [1.507862014579557E+02 -1.716315895017156E-02;
-     -1.716315895017156E-02  1.830314004469306E-05]
-   
-    F3b = 0.5226
-    Lambda = 341
-    vals = cobs([Lambda,F3b], covar, [1,2])
-    F2 = uwreal([1.7505,0.0089],"F2")
-    F3 = vals[2]
-
-    
-    
-    gbar = g_from_RG_eq(mu, vals[1], bcoefs)
-    F4 = solve_RG_eq_mass(gbar, bcoefs, tcoefs)
-    uwerr(gbar); uwerr(F4)
-    println("g  = ", gbar)
-    println("F4 = ", F4)
-    # F =  mhad * F2 * F3 * F4
-    F = mhad * F4
-    return F 
-end
-
