@@ -1,7 +1,7 @@
 # MassRunning.jl
 This package solve the RG equations to perform the running down to the $\overline{\mathrm{MS}}$ scheme.
 ### Installation
-The package is not registered in the general Julia registry. It can be installed with the Julia package manager Pkg:
+The package is not registered in the general Julia registry. `MassRunning.jl` depends on the `ADerrors.jl` package https://igit.ific.uv.es/alramos/aderrors.jl which should be installed beforehand. Having fulfilled this requirement, `MassRunning.jl` can be installed with the Julia package manager Pkg:
 ```
 julia > ] # open package manager
 (@v1.7) pkg> add https://github.com/Bunniies/MassRunning.jl.git
