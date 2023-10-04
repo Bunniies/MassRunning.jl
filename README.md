@@ -11,11 +11,15 @@ julia > ] # open package manager
 - running from SF at scale $\mu_{had}$ to $\overline{\mathrm{MS}}$ scheme supported.
 - running from RGI mass to $\overline{\mathrm{MS}}$ supported.
 - Covariance between $\Lambda$ and $\frac{\bar m_{SF}(\mu_0/2)}{\bar m_{SF}(\mu_{had})}$ properly taken into account in the error propagation.
-- Auxiliary function to perform linear error propagation and check results consistency.
+- Decoupling between $N_f=3$ and $N_f=4$ flavours supported.
 
 ### Usage and theory
 - In the  folder example  there is a file showing how to perform the running for the charm quark mass in the SF scheme down to the $\overline{\mathrm{MS}}$  scheme.
 - In the folder notes there is a theoretical explanation of the running by Carlos Pena on which the code is based.
+
+
+### Acknowledgments 
+- We thanks Gregorio Herdo\'{i}za for debugging the code and implementing the decoupling between $N_f=3$ and N_f=4$ flavours.
 
 
 
