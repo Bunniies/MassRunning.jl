@@ -19,7 +19,7 @@ julia > ] # open package manager
 
 
 ### Acknowledgments 
-- We thanks Gregorio Herdo\'{i}za for debugging the code and implementing the decoupling between $N_f=3$ and N_f=4$ flavours.
+- We thanks Gregorio Herdoiza for debugging the code and implementing the decoupling between $N_f=3$ and N_f=4$ flavours.
 
 
 
